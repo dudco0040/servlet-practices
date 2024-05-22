@@ -14,6 +14,8 @@
   
     <modules>
     	<module>helloweb</module>
+    	<module>emsillist1</module>
+    	<module>guestbook1</module>
     </modules>
 </project>
 
