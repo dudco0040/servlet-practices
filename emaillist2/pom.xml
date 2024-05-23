@@ -23,7 +23,7 @@
 	</dependencies>
 	
     <build>
-	<finalName>emaillist1</finalName>
+	<finalName>emaillist2</finalName>
   </build>
   
 </project>
