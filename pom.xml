@@ -12,6 +12,20 @@
     <maven.compiler.target>17</maven.compiler.target>
   </properties>
   
+  <build>
+ 	<plugins>
+		<plugin>
+			<groupId>org.apache.tomcat.maven</groupId>
+	 	   <artifactId>tomcat7-maven-plugin</artifactId>
+	  	  <version>2.2</version>
+	  	  <configuration>
+			<url>${tomcat.depoly.url}</url>
+			<server>tomcat-poscodx</server>
+		  </configuration>
+		</plugin>
+	</plugins>
+  </build>
+  
     <modules>
     	<module>helloweb</module>
     	<module>emsillist1</module>
