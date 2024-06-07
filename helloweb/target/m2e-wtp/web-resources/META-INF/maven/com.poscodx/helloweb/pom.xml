@@ -18,7 +18,6 @@
   <!-- https://mvnrepository.com/artifact/javax.servlet/servlet-api -->
 
 <dependencies>
-	
 	<dependency>
 	    <groupId>javax.servlet</groupId>
 	    <artifactId>javax.servlet-api</artifactId>
@@ -36,11 +35,9 @@
 </dependencies>
 	
 
+	<build>
+		<finalName>helloweb</finalName>
   
-  <build>
-	<finalName>helloweb</finalName>
-  </build>
-  
-  
-  
+ 	 </build>
+
 </project>

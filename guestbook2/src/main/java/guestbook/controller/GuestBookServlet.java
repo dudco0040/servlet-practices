@@ -33,10 +33,10 @@ public class GuestBookServlet extends HttpServlet {
 			String no = request.getParameter("no");
 			String password = request.getParameter("password");
 			
-			GuestBookVo vo = new GuestBookVo();
-			vo.setNo(Long.parseLong(no));
-			vo.setPassword(password);
-		    new GuestBookDao().delete(vo);
+			//GuestBookVo vo = new GuestBookVo();
+			//vo.setNo(Long.parseLong(no));
+			//vo.setPassword(password);
+		    new GuestBookDao().deleteByNo(Long.parseLong(no), password);
 		    
 			response.sendRedirect(request.getContextPath() + "/gb");
 			
@@ -44,7 +44,7 @@ public class GuestBookServlet extends HttpServlet {
 			request.setCharacterEncoding("utf-8");
 			String Name = request.getParameter("name");
 			String Password = request.getParameter("password");
-			String Contents = request.getParameter("message");
+			String Contents = request.getParameter("content");
 			
 			GuestBookVo vo = new GuestBookVo();
 			vo.setName(Name);

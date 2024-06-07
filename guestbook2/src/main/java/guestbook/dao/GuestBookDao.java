@@ -12,175 +12,136 @@ import guestbook.Vo.GuestBookVo;
 
 
 public class GuestBookDao {
-	
-	
-	public boolean insert(GuestBookVo vo) {
-		boolean result = false;
+	private Connection getConnection() throws SQLException {
 		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
 		try {
-			//1. JDBC Driver 로딩
-			Class.forName("org.mariadb.jdbc.Driver");
-			
-			//2. 연결하기
-			String url = "jdbc:mariadb://192.168.0.202:3306/webdb?charset=utf8";
-			conn = DriverManager.getConnection(url, "webdb", "webdb");
+		Class.forName("org.mariadb.jdbc.Driver");
+		
+		String url = "jdbc:mariadb://192.168.0.202:3306/webdb?charset=utf-8";
+		
+		conn = DriverManager.getConnection(url, "webdb", "webdb");
+		}catch (ClassNotFoundException e) {
+			System.out.println("드라이버 로딩 실패: "+e);
+		} 
+		return conn;
+	}
+	
 
-			//3. Statement 준비
-			String sql = "insert into guestbook(name, password, contents, reg_date) values(?, ?, ?, now())";    // 
-			pstmt = conn.prepareStatement(sql);
+
+	public void deleteByNo(Long no, String pw) {
+		try(
+			Connection conn = getConnection(); 
+			PreparedStatement pstmt = conn.prepareStatement("delete from guestbook where no=? and password=?");  
+		){
+			pstmt.setLong(1, no);
+			pstmt.setString(2, pw);
+			pstmt.executeUpdate();
 			
-			//4. binding
-			pstmt.setString(1, vo.getName());
-			pstmt.setString(2, vo.getPassword());
-			pstmt.setString(3, vo.getContents());
-//			pstmt.setString(4, vo.getRegDate());   // insert now 쿼리가 시작된 시간
-			
-			//5. SQL 실행
-			int count = pstmt.executeUpdate();
-			
-			//6. 결과 처리
-			result = count == 1;
-			
-		} catch (ClassNotFoundException e) {
-			System.out.println("드라이버 로딩 실패:" + e);
 		} catch (SQLException e) {
-			System.out.println("error:" + e);
-		} finally {
-			try {
-				if(pstmt != null) {
-					pstmt.close();
-				}
-				
-				if(conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+			System.out.println("error : "+e);
 		}
 		
-		return result;
 	}
 
-	public boolean delete(GuestBookVo vo) {
-		boolean result = false;
-		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
-		try {
-			//1. JDBC Driver 로딩
-			Class.forName("org.mariadb.jdbc.Driver");
-			
-			//2. 연결하기
-			String url = "jdbc:mariadb://192.168.0.202:3306/webdb?charset=utf8";
-			conn = DriverManager.getConnection(url, "webdb", "webdb");
+	
+  public int insert(GuestBookVo vo) {
+	    Connection conn = null;
+	    PreparedStatement pstmt1 = null;
+	    PreparedStatement pstmt2 = null;
+	    PreparedStatement pstmt3 = null;
+	    int result = 0;
 
-			//3. Statement 준비
-			String sql = "delete from guestbook where no = ? and password = ?";
-			pstmt = conn.prepareStatement(sql);
+	    try {
+	      conn = getConnection();
+	      pstmt1 = conn.prepareStatement("update guestbook_log set count = count +1 where date = current_date();");
+	      pstmt2 = conn.prepareStatement("insert into guestbook_log value(current_date(), 1)");  // 결과가 0이면 insert 
+	      pstmt3 = conn.prepareStatement("insert into guestbook values(null, ?, ?, ?, now())");
+	      pstmt3.setString(1, vo.getName());
+	      pstmt3.setString(2, vo.getPassword());
+	      pstmt3.setString(3, vo.getContents());
+	      
+	      
+	      // TX:BEGIN ///////
+	      conn.setAutoCommit(false);
+	      
+	      // DML1
+	      int rowCount = pstmt1.executeUpdate();
+	      
+	      // DML2
+	      if(rowCount == 0) {
+	    	  pstmt2.executeUpdate();
+	      }
+	      
+	      // DML3	      
+	      result = pstmt3.executeUpdate();
+	      
+	  	// Tx: end (SUCCESS) /////
+			conn.commit();
 			
-			//4. binding
-			pstmt.setLong(1, vo.getNo());
-			pstmt.setString(2, vo.getPassword());
-			
-			
-			//5. SQL 실행
-			int count = pstmt.executeUpdate();
-			
-			//6. 결과 처리
-			result = count == 1;
-			
-		} catch (ClassNotFoundException e) {
-			System.out.println("드라이버 로딩 실패:" + e);
-		} catch (SQLException e) {
-			System.out.println("error:" + e);
-		} finally {
-			try {
-				if(pstmt != null) {
-					pstmt.close();
-				}
-				
-				if(conn != null) {
-					conn.close();
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-		}
-		
-		return result;
-	}
+	    } catch (SQLException e) {		// 중간에 fail이 발생하면 catch 문으로 들어감 
+	      System.out.println("Error:" + e);
+	      
+		      try {
+		    	  conn.rollback();
+		      } catch(SQLException ignored) {
+		    	  
+		      }
+	      
+	    } finally {
+	      try {
+	        if (pstmt3 != null) {
+	          pstmt1.close();
+	        }
+	        if (pstmt2 != null) {
+		          pstmt1.close();
+		        }
+	        if (pstmt1 != null) {
+		          pstmt1.close();
+		        }
+	        if (conn != null) {
+	          conn.close();
+	        }
+	      } catch (SQLException ignored) {
+	      }
+	    }
+	    return result;
+	  }
 
-	public List<GuestBookVo> findAll() {
+	public List<GuestBookVo> findAll(){
 		List<GuestBookVo> result = new ArrayList<>();
 		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		
-		try {
-			//1. JDBC Driver 로딩
-			Class.forName("org.mariadb.jdbc.Driver");
+		try(
+				Connection conn = getConnection(); 
+				PreparedStatement pstmt = conn.prepareStatement("select no,name,password,contents,reg_date from guestbook order by no desc");  
+					
 			
-			//2. 연결하기
-			String url = "jdbc:mariadb://192.168.0.202:3306/webdb?charset=utf8";
-			conn = DriverManager.getConnection(url, "webdb", "webdb");
-
-			//3. Statement 준비
-			String sql =
-					"select no, name, password, contents, date_format(reg_date, '%Y/%m/%d %H:%i:%s') as reg_date from guestbook order by reg_date desc";   // 실제 보여지는 것과 필요한 것... 
-			pstmt = conn.prepareStatement(sql);
+			){
 			
-			//5. SQL 실행
-			rs = pstmt.executeQuery();
-			
-			//6. 결과 처리
-			while(rs.next()) {
-				Long no = rs.getLong(1);
-				String name = rs.getString(2);
-				String password = rs.getString(3);
-				String contents = rs.getString(4);
-				String reg_date = rs.getString(5);
+				ResultSet rs = pstmt.executeQuery();
 				
-				// vo를 생성 
-				GuestBookVo vo = new GuestBookVo();
-				vo.setNo(no);
-				vo.setName(name);
-				vo.setPassword(password);
-				vo.setContents(contents);
-				vo.setRegDate(reg_date);
-				
-				System.out.println(no + " " + name + " " + password + " " + reg_date);
-				result.add(vo);
-				
-			}
-		} catch (ClassNotFoundException e) {
-			System.out.println("드라이버 로딩 실패:" + e);
-		} catch (SQLException e) {
-			System.out.println("error:" + e);
-		} finally {
-			try {
-				if(rs != null) {
-					rs.close();
-				}
-				
-				if(pstmt != null) {
-					pstmt.close();
-				}
-				
-				if(conn != null) {
-					conn.close();
+				while(rs.next()) {
+					GuestBookVo vo = new GuestBookVo();
+					
+					Long no = rs.getLong(1);
+					String name = rs.getString(2);
+					String pw = rs.getString(3);
+					String contents = rs.getString(4);
+					String regDate = rs.getString(5);
+					
+					vo.setNo(no);
+					vo.setName(name);
+					vo.setPassword(contents);
+					vo.setContents(contents);
+					vo.setRegDate(regDate);
+					
+					result.add(vo);
 				}
 			} catch (SQLException e) {
-				e.printStackTrace();
+				System.out.println("error : "+e);
 			}
-		}
+
+		
 		return result;
 	}
-	
-	
-	
 }
+
